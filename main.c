@@ -6,12 +6,12 @@
 int main(int argc, char *argv[])
 {
 	int min, max;
-	Random_Init();
+	int value;
 	
 	//printf("argc = %d\n", argc);
 	if (argc != 3) {
 		printf("Usage: random min max\n");
-		goto done;
+		return 0;
 	}
 	
 	// argv[0] is the program name
@@ -27,10 +27,12 @@ int main(int argc, char *argv[])
 		max = temp;
 	}
 	
-	printf("%d\n", Random_Int(min, max));
-	
-done:
+	Random_Init();
+	value = Random_Int(min, max);
 	Random_Exit();
+	
+	printf("%d\n", value);
+	
 	return 0;
 }
 
