@@ -22,21 +22,30 @@ CXX=g++
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	${CC} -c ${CFLAGS} -o $(BUILDDIR)/$*.o $<;
+$(BUILDDIR)/%.opp: $(SRCDIR)/%.cpp
+	${CXX} -c ${CPPFLAGS} -o $(BUILDDIR)/$*.opp $<;
 
 #Autogenerate dependencies information
 #The generated makefiles get sourced into this file later
 $(DEPDIR)/%.d: $(SRCDIR)/%.c Makefile
 	$(CC) -M -MM -MT "$(BUILDDIR)/$*.o" -MT "$(DEPDIR)/$*.d" -MF $@ ${CFLAGS} $<;
+$(DEPROOT)/%.dpp: $(SRCDIR)/%.cpp Makefile
+	$(CXX) -M -MM -MT "$(BUILDDIR)/$*.opp" \
+	    -MT "$(DEPDIR)/$*.dpp" \
+	    -MF $@ ${CPPFLAGS} $<;
 
 #No paths. VPATH is assumed
-SOURCES = main.c
+C_SOURCES = main.c
+CPP_SOURCES = 
 
 #For reasons I cannot fathom, MBLIB_OBJ has to be last
 # or things don't link right...
 
 MBLIB_OBJ = $(MBLIB_BUILDDIR)/MBLib.a
 
-RANDOM_OBJ = $(addprefix $(BUILDDIR)/, $(subst .c,.o, $(SOURCES))) $(MBLIB_OBJ)
+C_OBJ=$(addprefix $(BUILDDIR)/, $(subst .c,.o, $(C_SOURCES)))
+CPP_OBJ=$(addprefix $(BUILDDIR)/, $(subst .cpp,.opp, $(CPP_SOURCES)))
+RANDOM_OBJ = $(C_OBJ) $(CPP_OBJ) $(MBLIB_OBJ)
 		     
 .PHONY: all clean distclean dist MBLib
 
@@ -51,7 +60,7 @@ MBLib:
 random: $(BUILDROOT)/random
 
 $(BUILDROOT)/random: $(RANDOM_OBJ)
-	${CC} ${CFLAGS} ${LIBFLAGS} $(RANDOM_OBJ) -o $(BUILDROOT)/random
+	${CXX} ${CFLAGS} ${LIBFLAGS} $(RANDOM_OBJ) -o $(BUILDROOT)/random
 
 # XXX: I don't yet have a way to auto create the build dirs before
 #      building... 
@@ -59,7 +68,7 @@ $(BUILDROOT)/random: $(RANDOM_OBJ)
 clean:
 	$(MAKE) -f $(MBLIB_SRCDIR)/Makefile clean
 	rm -f $(TMPDIR)/*
-	rm -f $(BUILDDIR)/*.o
+	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.opp
 	rm -f $(BUILDROOT)/random
 
 # after a distclean you'll need to run configure again
@@ -68,7 +77,8 @@ distclean: clean
 	rm -rf config.mk
 
 #include the generated dependency files
--include $(addprefix $(DEPDIR)/,$(subst .c,.d,$(SOURCES)))
+-include $(addprefix $(DEPDIR)/,$(subst .c,.d,$(C_SOURCES)))
+-include $(addprefix $(DEPDIR)/,$(subst .cpp,.dpp,$(CPP_SOURCES)))
 
 
 
