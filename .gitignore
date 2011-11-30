@@ -1,0 +1,6 @@
+*.o
+*.d
+build/config.h
+build/*
+config.mk
+local.mk
