@@ -55,9 +55,6 @@ else
 	echo 'MACOS=1' >> $CONFIG_MK;
 fi;
 
-echo '#define ARCH_AMD64 1' >> $CONFIG_H;
-echo 'ARCH_AMD64=1' >> $CONFIG_MK;
-
 if [ "$DEBUG" == "" ]; then
 	DEBUG=1;
 fi;
@@ -66,7 +63,7 @@ echo '#define DEBUG ' $DEBUG >> $CONFIG_H
 echo DEBUG=$DEBUG >> $CONFIG_MK;
 
 if [ "$DEBUG" != "0" ]; then
-	DEFAULT_CFLAGS="${DEFAULT_CFLAGS} -Wall -g"
+	DEFAULT_CFLAGS="${DEFAULT_CFLAGS} -Werror -Wall -g"
 else
 	if [ "$DEFAULT_CFLAGS" == "" ]; then
 		DEFAULT_CFLAGS="-O2 -fomit-frame-pointer"

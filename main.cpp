@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 			i++;
 			count = atoi(argv[i]);
 		} else {
-			if (bUsed >= ARRAYSIZE(bounds)) {
+			if (bUsed >= (int) ARRAYSIZE(bounds)) {
 				error = TRUE;
 				break;
 			}
