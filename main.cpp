@@ -5,6 +5,7 @@
 #include "MBString.h"
 #include "mbtypes.h"
 #include "mbutil.h"
+#include "MBVector.h"
 
 bool isNumber(const MBString &str)
 {
@@ -29,16 +30,24 @@ bool isNumber(const MBString &str)
 	return TRUE;
 }
 
+typedef struct {
+	int numDice;
+	int diceMax;
+} DiceRoll;
+
 int main(int argc, char *argv[])
 {
 	int min, max;
 	int value;
 	int count = 1;
 	MBString str;
+	MBVector<DiceRoll> dice;
 	bool error = FALSE;
 	
 	int bUsed = 0;
 	int bounds[2];
+	
+	bool useDice = FALSE;
 	
 	/*
 	 * Parse arguments.
@@ -55,7 +64,21 @@ int main(int argc, char *argv[])
 			}
 			i++;
 			count = atoi(argv[i]);
+		} else if (str.find('d') != -1) {
+			DiceRoll curDie;
+			int d = str.find('d');
+			MBString one = str.substr(0, d);
+			MBString two = str.substr(d + 1, str.length() - d - 1);
+			curDie.numDice = atoi(one.cstr());
+			curDie.diceMax = atoi(two.cstr());
+			useDice = TRUE;
+			
+			dice.push(curDie);
 		} else {
+			if (useDice) {
+				error = TRUE;
+			}
+			
 			if (bUsed >= (int) ARRAYSIZE(bounds)) {
 				error = TRUE;
 				break;
@@ -71,13 +94,14 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	if (bUsed != 2 || count <= 0) {
+	if ((bUsed != 2 && !useDice) || count <= 0) {
 		error = TRUE;
 	}
 	
 	if (error) {
 		printf("Usage: random [options] min max\n");
-		printf("  -c count    print count numbers\n");
+		printf("   or  random [options] diceSpec\n");
+		printf("  -c count    roll count numbers\n");
 		return 1;
 	}
 	
@@ -95,9 +119,18 @@ int main(int argc, char *argv[])
 	
 	Random_Init();
 	
-	for (int i = 0; i < count; i++) {
-		value = Random_Int(min, max);
-		printf("%d\n", value);
+	if (!useDice) {
+		for (int i = 0; i < count; i++) {
+			value = Random_Int(min, max);
+			printf("%d\n", value);
+		}
+	} else {
+		for (int i = 0; i < count; i++) {
+			for (int d = 0; d < dice.length(); d++) {
+				value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+				printf("%d\n", value);
+			}
+		}
 	}
 	
 	Random_Exit();	
