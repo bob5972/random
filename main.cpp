@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		for (int i = 0; i < count; i++) {
-			for (int d = 0; d < dice.length(); d++) {
+			for (int d = 0; d < dice.size(); d++) {
 				value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
 				printf("%d\n", value);
 			}
