@@ -42,12 +42,14 @@ int main(int argc, char *argv[])
 	int count = 1;
 	MBString str;
 	MBVector<DiceRoll> dice;
+	MBVector<MBString> strings;
 	bool error = FALSE;
 	
 	int bUsed = 0;
 	int bounds[2];
 	
 	bool useDice = FALSE;
+	bool useStrings = FALSE;
 	
 	/*
 	 * Parse arguments.
@@ -64,6 +66,15 @@ int main(int argc, char *argv[])
 			}
 			i++;
 			count = atoi(argv[i]);
+		} else if (str == "-s") {
+		    //Overloading loop variable!
+            for (i = i+1; i < argc; i++) {
+                strings.push(argv[i]);
+            }
+            useStrings = TRUE;
+		} else if (str == "-h") {
+		    // Print help text.
+		    error = TRUE;
 		} else if (str.find('d') != -1) {
 			DiceRoll curDie;
 			int d = str.find('d');
@@ -75,11 +86,13 @@ int main(int argc, char *argv[])
 			
 			dice.push(curDie);
 		} else {
-			if (useDice) {
+			if (useDice || useStrings) {
+			    TRACE();
 				error = TRUE;
 			}
 			
 			if (bUsed >= (int) ARRAYSIZE(bounds)) {
+    			TRACE();
 				error = TRUE;
 				break;
 			}
@@ -88,20 +101,38 @@ int main(int argc, char *argv[])
 				bounds[bUsed] = atoi(str.cstr());
 				bUsed++;
 			} else {
+			    TRACE();
 				error = TRUE;
 				break;
 			}
 		}
 	}
 	
-	if ((bUsed != 2 && !useDice) || count <= 0) {
+	if (bUsed != 2 && !(useDice || useStrings)) {
+	    TRACE();
+	    error = TRUE;
+    }
+    
+    if (useDice && useStrings) {
+        TRACE();
+        error = TRUE;
+    }
+    
+    if (count <= 0) {
+	    TRACE();
 		error = TRUE;
 	}
 	
+	if (useStrings && strings.size() == 0) {
+	    TRACE();
+	    error = TRUE;
+    }
+	
 	if (error) {
 		printf("Usage: random [options] min max\n");
-		printf("   or  random [options] diceSpec\n");
-		printf("  -c count    roll count numbers\n");
+		printf("   or  random [options] diceSpec (e.g. 2d6)\n");
+		printf("   or  random [options] -s str1 str2 ...\n");		
+		printf("  -c count    run \"count\" times\n");
 		return 1;
 	}
 	
@@ -119,19 +150,20 @@ int main(int argc, char *argv[])
 	
 	Random_Init();
 	
-	if (!useDice) {
-		for (int i = 0; i < count; i++) {
-			value = Random_Int(min, max);
-			printf("%d\n", value);
-		}
-	} else {
-		for (int i = 0; i < count; i++) {
-			for (int d = 0; d < dice.size(); d++) {
-				value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
-				printf("%d\n", value);
-			}
-		}
-	}
+	for (int i = 0; i < count; i++) {
+	    if (useStrings) {
+	        int r = Random_Int(0, strings.size() - 1);
+	        printf("%s\n", strings.get(r).cstr());
+	    } else if (useDice) {
+	        for (int d = 0; d < dice.size(); d++) {
+			    value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+			    printf("%d\n", value);
+		    }
+	    } else {
+		    value = Random_Int(min, max);
+		    printf("%d\n", value);
+	    }
+    }
 	
 	Random_Exit();	
 	return 0;
