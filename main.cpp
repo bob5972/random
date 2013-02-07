@@ -2,10 +2,10 @@
 #include <stdlib.h>
 
 #include "random.h"
-#include "MBString.h"
+#include "MBString.hpp"
 #include "mbtypes.h"
 #include "mbutil.h"
-#include "MBVector.h"
+#include "MBVector.hpp"
 
 bool isNumber(const MBString &str)
 {
@@ -16,12 +16,12 @@ bool isNumber(const MBString &str)
 		return FALSE;
 	}
 	
-	if (str[0] == '-' && len > 1) {
+	if (str.getChar(0) == '-' && len > 1) {
 		x++;
 	}
 	
 	while (x < len) {
-		if (str[x] < '0' || str[x] > '9') {
+		if (str.getChar(x) < '0' || str.getChar(x) > '9') {
 			return FALSE;
 		}
 		x++;
@@ -80,8 +80,8 @@ int main(int argc, char *argv[])
 			int d = str.find('d');
 			MBString one = str.substr(0, d);
 			MBString two = str.substr(d + 1, str.length() - d - 1);
-			curDie.numDice = atoi(one.cstr());
-			curDie.diceMax = atoi(two.cstr());
+			curDie.numDice = atoi(one.CStr());
+			curDie.diceMax = atoi(two.CStr());
 			useDice = TRUE;
 			
 			dice.push(curDie);
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 			}
 			
 			if (isNumber(str)) {
-				bounds[bUsed] = atoi(str.cstr());
+				bounds[bUsed] = atoi(str.CStr());
 				bUsed++;
 			} else {
 			    TRACE();
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < count; i++) {
 	    if (useStrings) {
 	        int r = Random_Int(0, strings.size() - 1);
-	        printf("%s\n", strings.get(r).cstr());
+	        printf("%s\n", strings.get(r).CStr());
 	    } else if (useDice) {
 	        for (int d = 0; d < dice.size(); d++) {
 			    value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
