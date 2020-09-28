@@ -37,7 +37,7 @@ NORETURN void PrintUsageAndExit()
     printf("\n");
     printf("random version 1.1\n");
     printf("Usage: random [options] min max\n");
-    printf("   or  random [options] diceSpec (e.g. 2d6)\n");
+    printf("   or  random [options] diceSpec (e.g. 2d6 1d20+4 1d20a 1d20+3d)\n");
     printf("   or  random [options] -s str1 str2 ...\n");
     printf("  -c count    run \"count\" times\n");
     exit(1);
