@@ -50,7 +50,7 @@ bool isNumber(const MBString &str)
 		return FALSE;
 	}
 	
-	if (str.getChar(0) == '-' && len > 1) {
+	if ((str.getChar(0) == '-' || str.getChar(0) == '+') && len > 1) {
 		x++;
 	}
 	
@@ -67,12 +67,13 @@ bool isNumber(const MBString &str)
 typedef struct {
 	int numDice;
 	int diceMax;
+    int mod;
+    char type;
 } DiceRoll;
 
 int main(int argc, char *argv[])
 {
 	int min, max;
-	int value;
 	int count = 1;
 	MBString str;
 	MBVector<DiceRoll> dice;
@@ -109,11 +110,57 @@ int main(int argc, char *argv[])
 		    PrintUsageAndExit();
 		} else if (str.find('d') != -1) {
 			DiceRoll curDie;
+            MBUtil_Zero(&curDie, sizeof(curDie));
+
 			int d = str.find('d');
-			MBString one = str.substr(0, d);
-			MBString two = str.substr(d + 1, str.length() - d - 1);
-			curDie.numDice = atoi(one.CStr());
-			curDie.diceMax = atoi(two.CStr());
+			MBString nDiceStr = str.substr(0, d);
+
+            if (d + 1 == str.length()) {
+                printf("Error: Malformed dice roll (eg 1d6)\n");
+                PrintUsageAndExit();
+            }
+
+            int len = 1;
+            while (d + len < str.length() &&
+                   str.getChar(d + len) >= '0' &&
+                   str.getChar(d + len) <= '9') {
+                len++;
+            }
+            len--;
+            ASSERT(len >= 1);
+
+			MBString maxRollStr = str.substr(d + 1, len);
+            MBString restStr = str.substr(d + 1 + len, str.length() - d - 1 - len);
+
+			curDie.numDice = atoi(nDiceStr.CStr());
+			curDie.diceMax = atoi(maxRollStr.CStr());
+
+            if (restStr.length() > 0) {
+                if (restStr.lastChar() == 'a' ||
+                    restStr.lastChar() == 'A') {
+                    curDie.type = 'a';
+                    restStr = restStr.substr(0, restStr.length() - 1);
+                } else if (restStr.lastChar() == 'd' ||
+                           restStr.lastChar() == 'D') {
+                    curDie.type = 'd';
+                    restStr = restStr.substr(0, restStr.length() - 1);
+                }
+            }
+
+            if (restStr.length() > 0) {
+                if (restStr.getChar(0) == '+' ||
+                    restStr.getChar(0) == '-') {
+                    if (!isNumber(restStr)) {
+                        printf("Error: Dice modifier not a number (eg 1d6+3)\n");
+                        PrintUsageAndExit();
+                    }
+                    curDie.mod = atoi(restStr.CStr());
+                } else {
+                    printf("Error: Malformed dice modifier (eg 1d6+3)\n");
+                    PrintUsageAndExit();
+                }
+            }
+
 			useDice = TRUE;
 			
 			dice.push(curDie);
@@ -173,12 +220,23 @@ int main(int argc, char *argv[])
 	Random_Init();
 	
 	for (int i = 0; i < count; i++) {
+        int value;
+
 	    if (useStrings) {
 	        int r = Random_Int(0, strings.size() - 1);
 	        printf("%s\n", strings.get(r).CStr());
 	    } else if (useDice) {
 	        for (int d = 0; d < dice.size(); d++) {
-			    value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+
+                value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+                if (dice[d].type == 'a') {
+                    int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+                    value = MAX(value, reroll);
+                } else if (dice[d].type == 'd') {
+                    int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+                    value = MIN(value, reroll);
+                }
+                value += dice[d].mod;
 			    printf("%d\n", value);
 		    }
 	    } else {
