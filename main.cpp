@@ -34,6 +34,8 @@
 
 NORETURN void PrintUsageAndExit()
 {
+    printf("\n");
+    printf("random version 1.1\n");
     printf("Usage: random [options] min max\n");
     printf("   or  random [options] diceSpec (e.g. 2d6)\n");
     printf("   or  random [options] -s str1 str2 ...\n");
@@ -105,7 +107,8 @@ int main(int argc, char *argv[])
                 strings.push(argv[i]);
             }
             useStrings = TRUE;
-		} else if (str == "-h") {
+		} else if (str == "-h" ||
+                   str == "--help") {
 		    // Print help text.
 		    PrintUsageAndExit();
 		} else if (str.find('d') != -1) {
