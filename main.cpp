@@ -32,6 +32,15 @@
 #include "mbutil.h"
 #include "MBVector.hpp"
 
+NORETURN void PrintUsageAndExit()
+{
+    printf("Usage: random [options] min max\n");
+    printf("   or  random [options] diceSpec (e.g. 2d6)\n");
+    printf("   or  random [options] -s str1 str2 ...\n");
+    printf("  -c count    run \"count\" times\n");
+    exit(1);
+}
+
 bool isNumber(const MBString &str)
 {
 	int x = 0;
@@ -68,8 +77,6 @@ int main(int argc, char *argv[])
 	MBString str;
 	MBVector<DiceRoll> dice;
 	MBVector<MBString> strings;
-	bool error = FALSE;
-	
 	int bUsed = 0;
 	int bounds[2];
 	
@@ -86,8 +93,8 @@ int main(int argc, char *argv[])
 		
 		if (str == "-c") {
 			if (i + 1 >= argc) {
-				error = TRUE;
-				break;
+                printf("Error: -c requires an argument\n");
+				PrintUsageAndExit();
 			}
 			i++;
 			count = atoi(argv[i]);
@@ -99,7 +106,7 @@ int main(int argc, char *argv[])
             useStrings = TRUE;
 		} else if (str == "-h") {
 		    // Print help text.
-		    error = TRUE;
+		    PrintUsageAndExit();
 		} else if (str.find('d') != -1) {
 			DiceRoll curDie;
 			int d = str.find('d');
@@ -112,54 +119,44 @@ int main(int argc, char *argv[])
 			dice.push(curDie);
 		} else {
 			if (useDice || useStrings) {
-			    TRACE();
-				error = TRUE;
+                printf("Error: Can't mix min/max, dice, and strings\n");
+				PrintUsageAndExit();
 			}
 			
 			if (bUsed >= (int) ARRAYSIZE(bounds)) {
-    			TRACE();
-				error = TRUE;
-				break;
+    			printf("Error: Too many bounds?\n");
+				PrintUsageAndExit();
 			}
 			
 			if (isNumber(str)) {
 				bounds[bUsed] = atoi(str.CStr());
 				bUsed++;
 			} else {
-			    TRACE();
-				error = TRUE;
-				break;
+			    printf("Error: Bound is not a number?\n");
+				PrintUsageAndExit();
 			}
 		}
 	}
 	
 	if (bUsed != 2 && !(useDice || useStrings)) {
-	    TRACE();
-	    error = TRUE;
+	    printf("Error: Not enough bounds\n");
+        PrintUsageAndExit();
     }
     
     if (useDice && useStrings) {
-        TRACE();
-        error = TRUE;
+        printf("Error: Can't mix dice and strings\n");
+        PrintUsageAndExit();
     }
     
     if (count <= 0) {
-	    TRACE();
-		error = TRUE;
+	    printf("Error: Count must be >= 0\n");
+        PrintUsageAndExit();
 	}
 	
 	if (useStrings && strings.size() == 0) {
-	    TRACE();
-	    error = TRUE;
+	    printf("Error: String mode selected, but no strings found\n");
+        PrintUsageAndExit();
     }
-	
-	if (error) {
-		printf("Usage: random [options] min max\n");
-		printf("   or  random [options] diceSpec (e.g. 2d6)\n");
-		printf("   or  random [options] -s str1 str2 ...\n");		
-		printf("  -c count    run \"count\" times\n");
-		return 1;
-	}
 	
 	min = bounds[0];
 	max = bounds[1];
