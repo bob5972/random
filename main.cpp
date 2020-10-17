@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "random.h"
 #include "MBString.hpp"
@@ -35,11 +36,12 @@
 NORETURN void PrintUsageAndExit()
 {
     printf("\n");
-    printf("random version 1.1\n");
+    printf("random version 1.2\n");
     printf("Usage: random [options] min max\n");
     printf("   or  random [options] diceSpec (e.g. 2d6 1d20+4 1d20a 1d20+3d)\n");
     printf("   or  random [options] -s str1 str2 ...\n");
     printf("  -c count    run \"count\" times\n");
+    printf("  -i          read diceSpec from stdIn\n");
     exit(1);
 }
 
@@ -73,18 +75,116 @@ typedef struct {
     char type;
 } DiceRoll;
 
+void DoBounds(int min, int max)
+{
+    int value;
+    if (min > max) {
+        int temp = min;
+        min = max;
+        max = temp;
+    }
+
+    value = Random_Int(min, max);
+    printf("%d\n", value);
+}
+
+void DoStrings(MBVector<MBString> &strings)
+{
+    int r = Random_Int(0, strings.size() - 1);
+    printf("%s\n", strings.get(r).CStr());
+}
+
+void DoDice(MBVector<DiceRoll> &dice)
+{
+    int value;
+    for (int d = 0; d < dice.size(); d++) {
+        value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+        if (dice[d].type == 'a') {
+            int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+            value = MAX(value, reroll);
+        } else if (dice[d].type == 'd') {
+            int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
+            value = MIN(value, reroll);
+        }
+        value += dice[d].mod;
+        printf("%d\n", value);
+    }
+}
+
+DiceRoll ParseDice(const MBString str)
+{
+    DiceRoll curDie;
+    MBUtil_Zero(&curDie, sizeof(curDie));
+
+    int d = str.find('d');
+    if (d == -1) {
+        printf("Error: Malformed dice roll (eg 1d6)\n");
+        PrintUsageAndExit();
+    }
+
+    MBString nDiceStr = str.substr(0, d);
+
+    if (d + 1 == str.length()) {
+        printf("Error: Malformed dice roll (eg 1d6)\n");
+        PrintUsageAndExit();
+    }
+
+    int len = 1;
+    while (d + len < str.length() &&
+            str.getChar(d + len) >= '0' &&
+            str.getChar(d + len) <= '9') {
+        len++;
+    }
+    len--;
+    ASSERT(len >= 1);
+
+    MBString maxRollStr = str.substr(d + 1, len);
+    MBString restStr = str.substr(d + 1 + len, str.length() - d - 1 - len);
+
+    curDie.numDice = atoi(nDiceStr.CStr());
+    curDie.diceMax = atoi(maxRollStr.CStr());
+
+    if (restStr.length() > 0) {
+        if (restStr.lastChar() == 'a' ||
+            restStr.lastChar() == 'A') {
+            curDie.type = 'a';
+            restStr = restStr.substr(0, restStr.length() - 1);
+        } else if (restStr.lastChar() == 'd' ||
+                    restStr.lastChar() == 'D') {
+            curDie.type = 'd';
+            restStr = restStr.substr(0, restStr.length() - 1);
+        }
+    }
+
+    if (restStr.length() > 0) {
+        if (restStr.getChar(0) == '+' ||
+            restStr.getChar(0) == '-') {
+            if (!isNumber(restStr)) {
+                printf("Error: Dice modifier not a number (eg 1d6+3)\n");
+                PrintUsageAndExit();
+            }
+            curDie.mod = atoi(restStr.CStr());
+        } else {
+            printf("Error: Malformed dice modifier (eg 1d6+3)\n");
+            PrintUsageAndExit();
+        }
+    }
+
+    return curDie;
+}
+
 int main(int argc, char *argv[])
 {
-	int min, max;
 	int count = 1;
 	MBString str;
 	MBVector<DiceRoll> dice;
 	MBVector<MBString> strings;
 	int bUsed = 0;
 	int bounds[2];
-	
+
 	bool useDice = FALSE;
 	bool useStrings = FALSE;
+    bool useStdIn = FALSE;
 	
 	/*
 	 * Parse arguments.
@@ -107,69 +207,18 @@ int main(int argc, char *argv[])
                 strings.push(argv[i]);
             }
             useStrings = TRUE;
-		} else if (str == "-h" ||
+		} else if (str == "-i") {
+            useStdIn = TRUE;
+        } else if (str == "-h" ||
                    str == "--help") {
 		    // Print help text.
 		    PrintUsageAndExit();
 		} else if (str.find('d') != -1) {
-			DiceRoll curDie;
-            MBUtil_Zero(&curDie, sizeof(curDie));
-
-			int d = str.find('d');
-			MBString nDiceStr = str.substr(0, d);
-
-            if (d + 1 == str.length()) {
-                printf("Error: Malformed dice roll (eg 1d6)\n");
-                PrintUsageAndExit();
-            }
-
-            int len = 1;
-            while (d + len < str.length() &&
-                   str.getChar(d + len) >= '0' &&
-                   str.getChar(d + len) <= '9') {
-                len++;
-            }
-            len--;
-            ASSERT(len >= 1);
-
-			MBString maxRollStr = str.substr(d + 1, len);
-            MBString restStr = str.substr(d + 1 + len, str.length() - d - 1 - len);
-
-			curDie.numDice = atoi(nDiceStr.CStr());
-			curDie.diceMax = atoi(maxRollStr.CStr());
-
-            if (restStr.length() > 0) {
-                if (restStr.lastChar() == 'a' ||
-                    restStr.lastChar() == 'A') {
-                    curDie.type = 'a';
-                    restStr = restStr.substr(0, restStr.length() - 1);
-                } else if (restStr.lastChar() == 'd' ||
-                           restStr.lastChar() == 'D') {
-                    curDie.type = 'd';
-                    restStr = restStr.substr(0, restStr.length() - 1);
-                }
-            }
-
-            if (restStr.length() > 0) {
-                if (restStr.getChar(0) == '+' ||
-                    restStr.getChar(0) == '-') {
-                    if (!isNumber(restStr)) {
-                        printf("Error: Dice modifier not a number (eg 1d6+3)\n");
-                        PrintUsageAndExit();
-                    }
-                    curDie.mod = atoi(restStr.CStr());
-                } else {
-                    printf("Error: Malformed dice modifier (eg 1d6+3)\n");
-                    PrintUsageAndExit();
-                }
-            }
-
-			useDice = TRUE;
-			
-			dice.push(curDie);
+			dice.push(ParseDice(str));
+            useDice = TRUE;
 		} else {
-			if (useDice || useStrings) {
-                printf("Error: Can't mix min/max, dice, and strings\n");
+			if (useDice || useStrings || useStdIn) {
+                printf("Error: Can't mix min/max, dice, strings, or stdIn\n");
 				PrintUsageAndExit();
 			}
 			
@@ -188,67 +237,92 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	if (bUsed != 2 && !(useDice || useStrings)) {
-	    printf("Error: Not enough bounds\n");
-        PrintUsageAndExit();
+	if (useStdIn) {
+        if (bUsed != 0) {
+            printf("Error: Can't mix min/max and stdIn\n");
+            PrintUsageAndExit();
+        }
+        if (useDice || useStrings) {
+            printf("Error: Can't mix stdIn and other modes\n");
+            PrintUsageAndExit();
+        }
+        if (count != 1) {
+            printf("Error: Can't mix count and stdIn\n");
+            PrintUsageAndExit();
+        }
+    } else {
+        if (bUsed != 2 && !(useDice || useStrings)) {
+            printf("Error: Not enough bounds\n");
+            PrintUsageAndExit();
+        }
+
+        if (useDice && useStrings) {
+            printf("Error: Can't mix dice and strings\n");
+            PrintUsageAndExit();
+        }
+
+        if (useStdIn) {
+            printf("Error: Can't mix stdIn and other modes\n");
+            PrintUsageAndExit();
+        }
+
+            if (count <= 0) {
+                printf("Error: Count must be >= 0\n");
+                PrintUsageAndExit();
+            }
+
+        if (useStrings && strings.size() == 0) {
+            printf("Error: String mode selected, but no strings found\n");
+            PrintUsageAndExit();
+        }
     }
-    
-    if (useDice && useStrings) {
-        printf("Error: Can't mix dice and strings\n");
-        PrintUsageAndExit();
-    }
-    
-    if (count <= 0) {
-	    printf("Error: Count must be >= 0\n");
-        PrintUsageAndExit();
-	}
-	
-	if (useStrings && strings.size() == 0) {
-	    printf("Error: String mode selected, but no strings found\n");
-        PrintUsageAndExit();
-    }
-	
-	min = bounds[0];
-	max = bounds[1];
-	
-	if (min > max) {
-		int temp = min;
-		min = max;
-		max = temp;
-	}
-	
-	//printf("min = %d\n", min);
-	//printf("max = %d\n", max);
 	
 	Random_Init();
 	
-	for (int i = 0; i < count; i++) {
-        int value;
+    if (useStdIn) {
+        MBString line;
+        MBString str;
+        MBVector<MBString> strings;
+        MBVector<DiceRoll> dice;
+        while (MBString_GetLine(std::cin, line)) {
+            strings.makeEmpty();
+            dice.makeEmpty();
 
-	    if (useStrings) {
-	        int r = Random_Int(0, strings.size() - 1);
-	        printf("%s\n", strings.get(r).CStr());
-	    } else if (useDice) {
-	        for (int d = 0; d < dice.size(); d++) {
+            line = line.stripWS();
 
-                value = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
-                if (dice[d].type == 'a') {
-                    int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
-                    value = MAX(value, reroll);
-                } else if (dice[d].type == 'd') {
-                    int reroll = Random_DiceSum(dice[d].numDice, dice[d].diceMax);
-                    value = MIN(value, reroll);
+            str = "";
+            for (int x = 0; x < line.length(); x++) {
+                if (!MBUtil_IsWhitespace(line.getChar(x))) {
+                    str += line.getChar(x);
+                } else if (str.length() > 0) {
+                    strings.push(str);
+                    str = "";
                 }
-                value += dice[d].mod;
-			    printf("%d\n", value);
-		    }
-	    } else {
-		    value = Random_Int(min, max);
-		    printf("%d\n", value);
-	    }
+            }
+
+            if (str.length() > 0) {
+                strings.push(str);
+                str = "";
+            }
+
+            for (int x = 0; x < strings.size(); x++) {
+                dice.push(ParseDice(strings[x]));
+            }
+            DoDice(dice);
+        }
+    } else {
+        for (int i = 0; i < count; i++) {
+            if (useStrings) {
+                DoStrings(strings);
+            } else if (useDice) {
+                DoDice(dice);
+            } else {
+                DoBounds(bounds[0], bounds[1]);
+            }
+        }
     }
-	
-	Random_Exit();	
+
+	Random_Exit();
 	return 0;
 }
 
