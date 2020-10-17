@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 
 	bool useDice = FALSE;
 	bool useStrings = FALSE;
-    bool useStdIn = FALSE;
+        bool useStdIn = FALSE;
 
 	/*
 	 * Parse arguments.
@@ -309,7 +309,9 @@ int main(int argc, char *argv[])
             for (int x = 0; x < strings.size(); x++) {
                 dice.push(ParseDice(strings[x]));
             }
+
             DoDice(dice);
+            printf("\n");
         }
     } else {
         for (int i = 0; i < count; i++) {
