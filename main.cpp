@@ -49,22 +49,22 @@ bool isNumber(const MBString &str)
 {
 	int x = 0;
 	int len = str.length();
-	
+
 	if (len == 0) {
 		return FALSE;
 	}
-	
+
 	if ((str.getChar(0) == '-' || str.getChar(0) == '+') && len > 1) {
 		x++;
 	}
-	
+
 	while (x < len) {
 		if (str.getChar(x) < '0' || str.getChar(x) > '9') {
 			return FALSE;
 		}
 		x++;
 	}
-	
+
 	return TRUE;
 }
 
@@ -118,14 +118,14 @@ DiceRoll ParseDice(const MBString str)
 
     int d = str.find('d');
     if (d == -1) {
-        printf("Error: Malformed dice roll (eg 1d6)\n");
+        printf("Error %d: Malformed dice roll (eg 1d6): %s\n", __LINE__, str.CStr());
         PrintUsageAndExit();
     }
 
     MBString nDiceStr = str.substr(0, d);
 
     if (d + 1 == str.length()) {
-        printf("Error: Malformed dice roll (eg 1d6)\n");
+        printf("Error %d: Malformed dice roll (eg 1d6): %s\n", __LINE__, str.CStr());
         PrintUsageAndExit();
     }
 
@@ -160,12 +160,13 @@ DiceRoll ParseDice(const MBString str)
         if (restStr.getChar(0) == '+' ||
             restStr.getChar(0) == '-') {
             if (!isNumber(restStr)) {
-                printf("Error: Dice modifier not a number (eg 1d6+3)\n");
+                printf("Error %d: Dice modifier not a number (eg 1d6+3): %s\n", __LINE__, restStr.CStr());
                 PrintUsageAndExit();
             }
             curDie.mod = atoi(restStr.CStr());
         } else {
-            printf("Error: Malformed dice modifier (eg 1d6+3)\n");
+            printf("Error %d: Malformed dice modifier (eg 1d6+3): expected +/-, got %d, str=%s\n",
+                   __LINE__, restStr.getChar(0), restStr.CStr());
             PrintUsageAndExit();
         }
     }
@@ -185,15 +186,15 @@ int main(int argc, char *argv[])
 	bool useDice = FALSE;
 	bool useStrings = FALSE;
     bool useStdIn = FALSE;
-	
+
 	/*
 	 * Parse arguments.
-	 
+
 	 * Skip argv[0] (program name).
 	 */
 	for (int i = 1; i < argc; i++) {
 		str = argv[i];
-		
+
 		if (str == "-c") {
 			if (i + 1 >= argc) {
                 printf("Error: -c requires an argument\n");
@@ -221,12 +222,12 @@ int main(int argc, char *argv[])
                 printf("Error: Can't mix min/max, dice, strings, or stdIn\n");
 				PrintUsageAndExit();
 			}
-			
+
 			if (bUsed >= (int) ARRAYSIZE(bounds)) {
     			printf("Error: Too many bounds?\n");
 				PrintUsageAndExit();
 			}
-			
+
 			if (isNumber(str)) {
 				bounds[bUsed] = atoi(str.CStr());
 				bUsed++;
@@ -236,7 +237,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	
+
 	if (useStdIn) {
         if (bUsed != 0) {
             printf("Error: Can't mix min/max and stdIn\n");
@@ -276,9 +277,9 @@ int main(int argc, char *argv[])
             PrintUsageAndExit();
         }
     }
-	
+
 	Random_Init();
-	
+
     if (useStdIn) {
         MBString line;
         MBString str;
@@ -325,4 +326,3 @@ int main(int argc, char *argv[])
 	Random_Exit();
 	return 0;
 }
-

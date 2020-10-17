@@ -36,7 +36,7 @@ $(DEPROOT)/%.dpp: $(SRCDIR)/%.cpp Makefile
 	    -MF $@ ${CPPFLAGS} $<;
 
 #No paths. VPATH is assumed
-C_SOURCES = 
+C_SOURCES =
 CPP_SOURCES = main.cpp
 
 #For reasons I cannot fathom, MBLIB_OBJ has to be last
@@ -47,7 +47,7 @@ MBLIB_OBJ = $(MBLIB_BUILDDIR)/MBLib.a
 C_OBJ=$(addprefix $(BUILDDIR)/, $(subst .c,.o, $(C_SOURCES)))
 CPP_OBJ=$(addprefix $(BUILDDIR)/, $(subst .cpp,.opp, $(CPP_SOURCES)))
 RANDOM_OBJ = $(C_OBJ) $(CPP_OBJ) $(MBLIB_OBJ)
-		     
+
 .PHONY: all clean distclean dist MBLib
 
 #The config check is to test if we've been configured
@@ -64,7 +64,7 @@ $(BUILDROOT)/random: $(RANDOM_OBJ)
 	${CXX} ${CFLAGS} ${LIBFLAGS} $(RANDOM_OBJ) -o $(BUILDROOT)/random
 
 # XXX: I don't yet have a way to auto create the build dirs before
-#      building... 
+#      building...
 # clean leaves the dep files
 clean:
 	$(MAKE) -f $(MBLIB_SRCDIR)/Makefile clean
@@ -77,9 +77,9 @@ distclean: clean
 	rm -rf $(BUILDROOT)/
 	rm -rf config.mk
 
+install: random
+	cp -i build/random ~/bin/local/random
+
 #include the generated dependency files
 -include $(addprefix $(DEPDIR)/,$(subst .c,.d,$(C_SOURCES)))
 -include $(addprefix $(DEPDIR)/,$(subst .cpp,.dpp,$(CPP_SOURCES)))
-
-
-
