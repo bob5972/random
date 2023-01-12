@@ -27,10 +27,10 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include "random.h"
+#include "Random.h"
 #include "MBString.hpp"
-#include "mbtypes.h"
-#include "mbutil.h"
+#include "MBTypes.h"
+#include "MBUtil.h"
 #include "MBVector.hpp"
 
 NORETURN void PrintUsageAndExit()
