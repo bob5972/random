@@ -40,6 +40,7 @@ NORETURN void PrintUsageAndExit()
     printf("Usage: random [options] min max\n");
     printf("   or  random [options] diceSpec (e.g. 2d6 1d20+4 1d20a 1d20+3d)\n");
     printf("   or  random [options] -s str1 str2 ...\n");
+    printf("   or  random [options] --hexColor\n");
     printf("  -c count    run \"count\" times\n");
     printf("  -i          read diceSpec from stdIn\n");
     exit(1);
@@ -74,6 +75,12 @@ typedef struct {
     int mod;
     char type;
 } DiceRoll;
+
+void DoHexColor()
+{
+    int value = Random_Int(0x000000, 0xFFFFFF);
+    printf("0x%X\n", value);
+}
 
 void DoBounds(int min, int max)
 {
@@ -183,9 +190,10 @@ int main(int argc, char *argv[])
 	int bUsed = 0;
 	int bounds[2];
 
+    bool useHexColor = FALSE;
 	bool useDice = FALSE;
 	bool useStrings = FALSE;
-        bool useStdIn = FALSE;
+    bool useStdIn = FALSE;
 
 	/*
 	 * Parse arguments.
@@ -217,9 +225,16 @@ int main(int argc, char *argv[])
 		} else if (str.find('d') != -1) {
 			dice.push(ParseDice(str));
             useDice = TRUE;
-		} else {
-			if (useDice || useStrings || useStdIn) {
-                printf("Error: Can't mix min/max, dice, strings, or stdIn\n");
+		} else if (str == "hexColor" ||
+                   str == "--hexColor") {
+            if (useHexColor) {
+                printf("Error: Can't use multiple hexColor");
+                PrintUsageAndExit();
+            }
+            useHexColor = TRUE;
+        } else {
+			if (useHexColor || useDice || useStrings || useStdIn) {
+                printf("Error: Can't mix min/max, dice, hexColor, strings, or stdIn\n");
 				PrintUsageAndExit();
 			}
 
@@ -243,7 +258,7 @@ int main(int argc, char *argv[])
             printf("Error: Can't mix min/max and stdIn\n");
             PrintUsageAndExit();
         }
-        if (useDice || useStrings) {
+        if (useDice || useStrings || useHexColor) {
             printf("Error: Can't mix stdIn and other modes\n");
             PrintUsageAndExit();
         }
@@ -252,14 +267,16 @@ int main(int argc, char *argv[])
             PrintUsageAndExit();
         }
     } else {
-        if (bUsed != 2 && !(useDice || useStrings)) {
+        if (bUsed != 2 && !(useDice || useStrings || useHexColor)) {
             printf("Error: Not enough bounds\n");
             PrintUsageAndExit();
         }
 
-        if (useDice && useStrings) {
-            printf("Error: Can't mix dice and strings\n");
-            PrintUsageAndExit();
+        if (useDice) {
+            if (useStrings|| useHexColor) {
+                printf("Error: Can't mix dice and strings/hexColor\n");
+                PrintUsageAndExit();
+            }
         }
 
         if (useStdIn) {
@@ -315,7 +332,9 @@ int main(int argc, char *argv[])
         }
     } else {
         for (int i = 0; i < count; i++) {
-            if (useStrings) {
+            if (useHexColor) {
+                DoHexColor();
+            } else if (useStrings) {
                 DoStrings(strings);
             } else if (useDice) {
                 DoDice(dice);
